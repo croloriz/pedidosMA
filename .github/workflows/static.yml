@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos S.P. de Málaga</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background-color: #ecf0f1;
+            padding: 10px;
+            margin: 0;
+        }
+        .container {
+            max-width: 100%;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #3498db;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        select, input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #bdc3c7;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        input[type="number"] {
+            width: 60px;
+        }
+        #extraNeedsSection {
+            margin-top: 30px;
+            border-top: 2px solid #3498db;
+            padding-top: 20px;
+        }
+        #extraNeedsTable input {
+            width: 100%;
+            padding: 8px;
+            margin: 4px 0;
+        }
+        #addExtraNeedBtn {
+            margin-top: 10px;
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Pedidos S.P. de Málaga</h1>
+        <div class="base-selector">
+            <label for="baseSelect">Seleccionar Base:</label>
+            <select id="baseSelect"></select>
+        </div>  
+        <div class="controls">
+            <select id="categorySelect"></select>
+            <input type="text" id="searchInput" placeholder="Buscar...">
+            <button onclick="generateOrder()">Generar Pedido</button>
+        </div>
+        <table id="itemsTable">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Mínimo</th>
+                    <th>Recomendado</th>
+                    <th>Pedido</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div id="extraNeedsSection">
+            <h2>Necesidades Fuera de Pedido</h2>
+            <table id="extraNeedsTable">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Cantidad</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="text" placeholder="Nombre del item"></td>
+                        <td><input type="number" placeholder="Cantidad" min="1"></td>
+                        <td><button onclick="removeExtraNeed(this)">Eliminar</button></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button id="addExtraNeedBtn" onclick="addExtraNeed()">Añadir Item</button>
+        </div>
+    </div>
+
+    <script>
+        const bases = ["CHURRIANA", "CIVIL", "CLÍNICO", "FUENGIROLA", "HELICÓPTERO", "HUELIN", "MARBELLA", "VELEZ-MÁLAGA"];
+        const categories = ["MEDICACION", "MEDICACION NEVERA", "MATERIAL VÍA AÉREA", "MATERIAL DE SONDAJE", "MATERIAL DE CURAS", "MATERIAL CIRCULATORIO Y MONITORIZACIÓN", "MATERIAL DE PROTECCIÓN INDIVIDUAL", "MATERIAL INMOVILIZACION / TRAUMA", "PILAS Y BATERÍAS", "DOCUMENTACIÓN Y PAPELERÍA", "MATERIAL DE LIMPIEZA Y ALMACENAJE", "MATERIAL FUNGIBLE NEVERA", "ESPECÍFICO HELICÓPTERO", "MATERIAL MANTENIMIENTO VEHÍCULO", "BOLSA RIESGO TECNOLÓGICO (UBICACIÓN EN BASE ASISTENCIAL)"];
+        const items = [
+            { category: "MEDICACION", name: "ACETILCISTEINA 2g (amp) ó 5 g (amp)", min: 3, recommended: 7, ordered: 0 },
+            { category: "MEDICACION", name: "ACETIL SALICILATO DE LISINA 900 mg", min: 1, recommended: 3, ordered: 0 },
+            // ... Añade aquí el resto de los items ...
+        ];
+
+        function populateSelect(selectId, options) {
+            const select = document.getElementById(selectId);
+            options.forEach(option => {
+                const el = document.createElement('option');
+                el.textContent = option;
+                el.value = option;
+                select.appendChild(el);
+            });
+        }
+
+        function updateTable() {
+            const category = document.getElementById('categorySelect').value;
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const tbody = document.querySelector('#itemsTable tbody');
+            tbody.innerHTML = '';
+            items.filter(item => 
+                item.category === category && 
+                item.name.toLowerCase().includes(search)
+            ).forEach(item => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = item.name;
+                row.insertCell(1).textContent = item.min;
+                row.insertCell(2).textContent = item.recommended;
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = 0;
+                input.value = item.ordered;
+                input.onchange = e => item.ordered = parseInt(e.target.value) || 0;
+                row.insertCell(3).appendChild(input);
+            });
+        }
+
+        function addExtraNeed() {
+            const tbody = document.querySelector("#extraNeedsTable tbody");
+            const newRow = tbody.insertRow();
+            newRow.innerHTML = `
+                <td><input type="text" placeholder="Nombre del item"></td>
+                <td><input type="number" placeholder="Cantidad" min="1"></td>
+                <td><button onclick="removeExtraNeed(this)">Eliminar</button></td>
+            `;
+        }
+
+        function removeExtraNeed(button) {
+            const row = button.closest('tr');
+            row.parentNode.removeChild(row);
+        }
+
+        function generateOrder() {
+            const baseSelect = document.getElementById('baseSelect');
+            const baseName = baseSelect.value;
+            const currentDate = new Date();
+            const formattedDate = currentDate.toLocaleString('es-ES', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+
+            let orderText = `PEDIDO DE ${baseName.toUpperCase()}\n`;
+            orderText += `Fecha y hora: ${formattedDate}\n\n`;
+            orderText += "ITEMS SOLICITADOS:\n";
+
+            const orderedItems = items.filter(item => item.ordered > 0);
+            orderedItems.forEach(item => {
+                orderText += `${item.category} - ${item.name}: ${item.ordered}\n`;
+            });
+
+            const extraNeeds = document.querySelectorAll("#extraNeedsTable tbody tr");
+            const validExtraNeeds = Array.from(extraNeeds).filter(row => {
+                const name = row.cells[0].querySelector('input').value.trim();
+                const quantity = row.cells[1].querySelector('input').value.trim();
+                return name && quantity;
+            });
+
+            if (validExtraNeeds.length > 0) {
+                orderText += "\nNECESIDADES FUERA DE PEDIDO:\n";
+                validExtraNeeds.forEach(row => {
+                    const name = row.cells[0].querySelector('input').value.trim();
+                    const quantity = row.cells[1].querySelector('input').value.trim();
+                    orderText += `${name}: ${quantity}\n`;
+                });
+            }
+
+            const blob = new Blob([orderText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pedido_${baseName.toLowerCase()}_${currentDate.toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            populateSelect('baseSelect', bases);
+            populateSelect('categorySelect', categories);
+            document.getElementById('categorySelect').onchange = updateTable;
+            document.getElementById('searchInput').oninput = updateTable;
+            updateTable();
+        });
+    </script>
+</body>
+</html>
+        uses: actions/deploy-pages@v4
